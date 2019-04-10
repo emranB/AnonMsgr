@@ -1,37 +1,63 @@
-import socket
+import sys, socket
+from Crypto.PublicKey import RSA
+from Crypto import Random
+from Crypto.Cipher import PKCS1_OAEP
 
 
-class Socket_Obj:
-  def __init__(self, Sock=None):
-    if Sock is None:
-      self.Sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    else:
-      self.Sock = Sock
+'''
+Key Pairs
+'''
+class ClientObj():
+  def __init__(self, UserName):
+    RandomGen = Random.new().read
+    PrivKey = RSA.generate(1024, RandomGen)
+    PubKey = PrivKey.publickey()
+    self.UserName = UserName
+    self.Sock = ''
+    self.PrivKey = PrivKey
+    self.PubKey = PubKey
 
-  def Bind(self, host, port):
-    self.Sock.bind((host, port))
+  def GetPubKey(self):
+    return self.PubKey.export_key().decode()
+    
+  def GetPrivKey(self):
+    return self.PrivKey.export_key().decode()
 
-  def Listen(self, conns=1):
-    self.Sock.listen(conns)
+  def EncryptMsg(self, message):
+    Encryptor = PKCS1_OAEP.new(self.PubKey)
+    return Encryptor.encrypt(message.encode())
 
-  def Accept(self):
-    return self.Sock.accept()
+  def DecryptMsg(self, message):
+    Decryptor = PKCS1_OAEP.new(self.PrivKey)
+    return Decryptor.decrypt(message).decode()
 
-  def Connect(self, host, port):
-    self.Sock.connect((host, port))
 
-  def Close(self):
-    self.Sock.close()
 
-  def GetSockDetails(self):
-    return self.Sock
 
-  def RecvMsg(self):
-    msg = self.Sock.recv(1024)
-    return msg
 
-  def SendMsg(self, msg):
-    self.Sock.send(msg)
+
+
+
+
+
+'''
+Create frame of messages
+  - Type: 2-bits
+        Connect         = 00 
+        Disconnect      = 01 
+        Data            = 10 
+        Acknowledgement = 11
+  - Length of message: 2-bits
+        00 to FF = 255 bytes (max length of message)
+  - From: 2 bits
+        Server = 00
+        Client = 01
+  - To: 2 bits
+        Server = 00
+        Client = 01
+  - Data: 0 or more bytes
+        (length is counted and specified)
+'''
   
 
 
